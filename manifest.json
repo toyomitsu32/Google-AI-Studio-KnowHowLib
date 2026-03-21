@@ -1,0 +1,36 @@
+{
+  "manifest_version": 3,
+  "name": "ノウハウ図書館インポーター",
+  "version": "1.0.0",
+  "description": "ノウハウ出版社で作成した記事をノウハウ図書館に入稿するChrome拡張",
+  "permissions": [
+    "clipboardRead",
+    "activeTab",
+    "scripting"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "host_permissions": [
+    "https://library.libecity.com/*"
+  ],
+  "action": {
+    "default_title": "図書館インポーター"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://library.libecity.com/articles/*/edit",
+        "https://library.libecity.com/articles/new"
+      ],
+      "js": ["library-bridge.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["lexical-writer.js"],
+      "matches": ["https://library.libecity.com/*"]
+    }
+  ]
+}

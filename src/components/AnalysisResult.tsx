@@ -82,16 +82,7 @@ export default function AnalysisResult({
   };
 
   const buildLibetterUrl = (titles: string[]) => {
-    if (titles.length === 0) return null;
-    // テーマタイトルを短縮（文字数制限対策）
-    const maxTitleLen = 27;
-    const themeLines = titles.map((title, i) =>
-      `${REACTION_EMOJIS[i]} ${title.length > maxTitleLen ? title.slice(0, maxTitleLen - 1) + '…' : title}`
-    ).join('\n');
-
-    const intro = 'どれが読みたい？\nリアクションで教えて！\n';
-    const body = `${intro}${themeLines}\n${TOOL_URL}`;
-    return `https://libecity.com/tweet/all?create=${encodeURIComponent(body)}`;
+    return 'https://libecity.com/room_list?room_id=SEG96Zoun75WxITHlKEi';
   };
 
   if (!analysis) return null;

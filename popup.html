@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,wght@0,400;0,600;0,700;1,400&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  body {
+    width: 280px;
+    font-family: 'Manrope', 'Noto Sans JP', 'Hiragino Sans', sans-serif;
+    font-size: 13px;
+    background: #f6f3f2;
+    color: #1b1c1c;
+    margin: 0;
+    padding: 16px;
+  }
+  .header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 14px;
+    border-bottom: 1px solid #dcc1b1;
+    padding-bottom: 12px;
+  }
+  .logo {
+    font-size: 10px;
+    background: #944a00;
+    color: white;
+    border-radius: 6px;
+    padding: 4px 8px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+  }
+  .title {
+    font-size: 13px;
+    font-weight: 600;
+    color: #1b1c1c;
+    font-family: 'Newsreader', serif;
+  }
+
+  /* ── メニュー画面 ── */
+  .menu-view { display: flex; flex-direction: column; gap: 10px; }
+
+  .menu-btn {
+    width: 100%;
+    padding: 14px 12px;
+    border-radius: 12px;
+    border: 1px solid #dcc1b1;
+    background: white;
+    color: #1b1c1c;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    text-align: left;
+    transition: all .15s;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  }
+  .menu-btn:hover {
+    border-color: #944a00;
+    background: #fff0e0;
+  }
+  .menu-btn:focus-visible {
+    outline: 2px solid #e67e22;
+    outline-offset: 2px;
+  }
+  .menu-btn .icon { font-size: 20px; flex-shrink: 0; }
+  .menu-btn .label { display: flex; flex-direction: column; gap: 2px; }
+  .menu-btn .sub { font-size: 11px; font-weight: 400; color: #564337; }
+
+  /* ── 流し込み画面 ── */
+  .inject-view { display: none; }
+
+  .status-box {
+    border-radius: 12px;
+    padding: 12px 14px;
+    margin-bottom: 12px;
+    font-size: 12px;
+    line-height: 1.5;
+    white-space: pre-wrap;
+  }
+  .status-box.guide  { background: #f6f3f2; border: 1px solid #dcc1b1; color: #564337; }
+  .status-box.ok     { background: #fff0e0; border: 1px solid #e67e22; color: #502600; }
+  .status-box.error  { background: #fef2f2; border: 1px solid #fca5a5; color: #dc2626; }
+  .status-box.warn   { background: #fff0e0; border: 1px solid #dcc1b1; color: #502600; }
+
+  .btn {
+    width: 100%;
+    padding: 12px;
+    border-radius: 999px;
+    border: none;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all .15s;
+  }
+  .btn-main {
+    background: #e67e22;
+    color: #502600;
+    letter-spacing: 0.02em;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  }
+  .btn-main:hover { background: #f59e0b; box-shadow: 0 4px 12px rgba(230, 126, 34, 0.25); }
+  .btn-main:disabled { opacity: 0.5; cursor: not-allowed; }
+  .btn-main:focus-visible { outline: 2px solid #944a00; outline-offset: 2px; }
+
+  .btn-back {
+    width: 100%;
+    padding: 9px;
+    border-radius: 12px;
+    border: 1px solid #dcc1b1;
+    background: transparent;
+    color: #564337;
+    font-size: 12px;
+    cursor: pointer;
+    margin-top: 8px;
+    transition: all .15s;
+  }
+  .btn-back:hover { border-color: #944a00; color: #1b1c1c; background: #fff0e0; }
+  .btn-back:focus-visible { outline: 2px solid #e67e22; outline-offset: 2px; }
+
+  .result {
+    margin-top: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .result-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 11px;
+    color: #564337;
+    padding: 3px 0;
+    border-bottom: 1px solid #f6f3f2;
+  }
+  .ok-mark  { color: #16a34a; }
+  .ng-mark  { color: #dc2626; }
+  .skip-mark { color: #564337; }
+
+  .note {
+    margin-top: 10px;
+    font-size: 11px;
+    color: #564337;
+    line-height: 1.5;
+    white-space: pre-wrap;
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <span class="logo">出版社</span>
+  <span class="title">入稿ツール</span>
+</div>
+
+<!-- メニュー画面 -->
+<div class="menu-view" id="menu-view">
+  <button class="menu-btn" id="btn-prepare">
+    <span class="icon">📝</span>
+    <span class="label">
+      原稿データを準備する
+      <span class="sub">JSON / MD から画像付き原稿を作成</span>
+    </span>
+  </button>
+  <button class="menu-btn" id="btn-go-inject">
+    <span class="icon">📥</span>
+    <span class="label">
+      入稿する
+      <span class="sub">準備済み原稿を図書館ページに反映</span>
+    </span>
+  </button>
+
+  <div style="border-top: 1px solid #dcc1b1; margin-top: 6px; padding-top: 10px; display: flex; flex-direction: column; gap: 6px;">
+    <a href="https://library.libecity.com/articles/ARTICLE_ID" target="_blank" rel="noopener noreferrer"
+       style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: #944a00; text-decoration: none; padding: 6px 4px; border-radius: 8px; transition: background 0.15s;"
+       onmouseover="this.style.background='#fff0e0'" onmouseout="this.style.background='transparent'">
+      📖 ノウハウ図書館の紹介記事
+    </a>
+    <a href="https://docs.google.com/forms/d/e/1FAIpQLSfCx6cnMCj00Ew7uyhd2iM30Rb9wMotxXO6xMtXpntIgXTlrQ/viewform" target="_blank" rel="noopener noreferrer"
+       style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: #944a00; text-decoration: none; padding: 6px 4px; border-radius: 8px; transition: background 0.15s;"
+       onmouseover="this.style.background='#fff0e0'" onmouseout="this.style.background='transparent'">
+      💬 フィードバックを送る
+    </a>
+  </div>
+</div>
+
+<!-- 流し込み画面 -->
+<div class="inject-view" id="inject-view">
+  <div class="status-box guide" id="status-box">
+    クリップボードの原稿データを読み取り、ノウハウ図書館の編集ページへ入稿します。
+  </div>
+
+  <button class="btn btn-main" id="btn-inject">入稿する</button>
+
+  <div class="result" id="result" style="display:none;">
+    <div class="result-row"><span>タイトル</span><span id="r-title"></span></div>
+    <div class="result-row"><span>要約</span><span id="r-summary"></span></div>
+    <div class="result-row"><span>本文</span><span id="r-body"></span></div>
+    <div class="result-row"><span>サムネイル</span><span id="r-thumb"></span></div>
+    <div class="result-row"><span>本文内画像</span><span id="r-imgs"></span></div>
+    <div class="result-row" id="r-category-row" style="display:none;"><span>カテゴリ</span><span id="r-category"></span></div>
+    <div class="result-row" id="r-tags-row" style="display:none;"><span>タグ</span><span id="r-tags"></span></div>
+  </div>
+
+  <div class="note" id="note"></div>
+
+  <button class="btn-back" id="btn-back">← メニューに戻る</button>
+</div>
+
+<script src="popup.js"></script>
+</body>
+</html>

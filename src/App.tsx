@@ -51,6 +51,9 @@ function getApiKey(): string {
   if (typeof window !== 'undefined' && (window as any).aistudio?.apiKey) {
     return (window as any).aistudio.apiKey;
   }
+  if (process.env.GEMINI_API_KEY) {
+    return process.env.GEMINI_API_KEY;
+  }
   if (process.env.API_KEY) {
     return process.env.API_KEY;
   }
