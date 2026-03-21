@@ -5,6 +5,7 @@ import {
   CheckIcon,
 } from './icons';
 import { ArticleOutline } from '../types';
+import { downloadExtensionZip } from '../utils/extensionZipData';
 
 interface PublishStepProps {
   outline: ArticleOutline | null;
@@ -119,14 +120,13 @@ export default function PublishStep({ outline, onBack, onRestart, onProceed }: P
       <div className="mb-6 bg-white rounded-xl p-5" style={{ border: '1px solid #e7e5e4' }}>
         <div className="flex items-center justify-between gap-4 mb-4">
           <p className="text-sm font-bold text-stone-700">ノウハウ図書館インポーター（Chrome拡張機能）</p>
-          <a
-            href="/knowhow-extension.zip"
-            download
+          <button
+            onClick={downloadExtensionZip}
             className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-semibold rounded-full transition-colors shrink-0"
             style={{ background: '#e67e22', color: '#502600' }}
           >
             ↓ ダウンロード
-          </a>
+          </button>
         </div>
         <ol className="text-xs text-stone-500 space-y-1.5 list-decimal list-inside">
           <li>上のボタンから <span className="font-semibold text-stone-600">knowhow-extension.zip</span> をダウンロード</li>
