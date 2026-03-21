@@ -1,0 +1,8 @@
+{
+  "name": "ノウハウ出版社",
+  "description": "あなたにしか書けないことを、対話で記事にする",
+  "version": "1.0.0",
+  "icon": "📚",
+  "tags": ["article", "writing", "ai", "interview"],
+  "entrypoint": "index.html"
+}

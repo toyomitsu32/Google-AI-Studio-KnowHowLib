@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ノウハウ出版社</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,wght@0,400;0,600;0,700;1,400&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet" />
+    <style>
+      /* ── Keyframe animations (used by Tailwind @utility classes) ── */
+      @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(8px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+      @keyframes pulse-soft {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.7; }
+      }
+      @keyframes spin-slow {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+      }
+      @keyframes bounce-slow {
+        0%, 100% { transform: translateY(0); }
+        50% { transform: translateY(-6px); }
+      }
+      @keyframes writing {
+        0%   { transform: translateX(0) rotate(0deg); }
+        25%  { transform: translateX(3px) rotate(2deg); }
+        50%  { transform: translateX(-2px) rotate(-1deg); }
+        75%  { transform: translateX(2px) rotate(1deg); }
+        100% { transform: translateX(0) rotate(0deg); }
+      }
+      @keyframes fade-in {
+        from { opacity: 0; }
+        to { opacity: 1; }
+      }
+
+      /* ── Particle animations (multi-direction) ── */
+      @keyframes particleUp {
+        0%   { opacity: 0; transform: translate(0, 0) scale(0.7) rotate(0deg); }
+        10%  { opacity: var(--particle-opacity, 0.7); transform: translate(var(--sway-a), -60px) scale(1) rotate(var(--rot-a)); }
+        50%  { opacity: var(--particle-opacity, 0.7); transform: translate(var(--sway-b), -300px) scale(1.05) rotate(var(--rot-b)); }
+        100% { opacity: 0; transform: translate(var(--sway-c), -600px) scale(0.8) rotate(var(--rot-d)); }
+      }
+      @keyframes particleDown {
+        0%   { opacity: 0; transform: translate(0, 0) scale(0.7) rotate(0deg); }
+        10%  { opacity: var(--particle-opacity, 0.7); transform: translate(var(--sway-a), 60px) scale(1) rotate(var(--rot-a)); }
+        50%  { opacity: var(--particle-opacity, 0.7); transform: translate(var(--sway-b), 300px) scale(1.05) rotate(var(--rot-b)); }
+        100% { opacity: 0; transform: translate(var(--sway-c), 600px) scale(0.8) rotate(var(--rot-d)); }
+      }
+      @keyframes particleDiagRight {
+        0%   { opacity: 0; transform: translate(0, 0) scale(0.7) rotate(0deg); }
+        10%  { opacity: var(--particle-opacity, 0.7); transform: translate(80px, -40px) scale(1) rotate(var(--rot-a)); }
+        50%  { opacity: var(--particle-opacity, 0.7); transform: translate(350px, -180px) scale(1.05) rotate(var(--rot-b)); }
+        100% { opacity: 0; transform: translate(600px, -350px) scale(0.8) rotate(var(--rot-d)); }
+      }
+      @keyframes particleDiagLeft {
+        0%   { opacity: 0; transform: translate(0, 0) scale(0.7) rotate(0deg); }
+        10%  { opacity: var(--particle-opacity, 0.7); transform: translate(-80px, -40px) scale(1) rotate(var(--rot-a)); }
+        50%  { opacity: var(--particle-opacity, 0.7); transform: translate(-350px, -180px) scale(1.05) rotate(var(--rot-b)); }
+        100% { opacity: 0; transform: translate(-600px, -350px) scale(0.8) rotate(var(--rot-d)); }
+      }
+
+      /* ── Hub design tokens (non-Tailwind, applied via className) ── */
+      .card-hover:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px -5px rgba(0,0,0,0.1);
+      }
+      .scrollbar-thin::-webkit-scrollbar { width: 4px; }
+      .scrollbar-thin::-webkit-scrollbar-track { background: transparent; }
+      .scrollbar-thin::-webkit-scrollbar-thumb { background: #d6d3d1; border-radius: 2px; }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

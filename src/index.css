@@ -1,0 +1,103 @@
+@import url('https://fonts.googleapis.com/css2?family=Newsreader:ital,wght@0,400;0,600;0,700;1,400&family=Manrope:wght@400;500;600;700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-serif: "Newsreader", serif;
+  --font-sans: "Manrope", "Noto Sans JP", "Hiragino Sans", sans-serif;
+}
+
+/* ── Custom Utilities (Tailwind v4) ── */
+
+@utility font-serif {
+  font-family: 'Newsreader', serif;
+}
+
+@utility font-body {
+  font-family: 'Manrope', 'Noto Sans JP', 'Hiragino Sans', sans-serif;
+}
+
+@utility animate-fade-in {
+  animation: fadeIn 0.5s ease-out;
+}
+
+@utility animate-pulse-soft {
+  animation: pulse-soft 2s ease-in-out infinite;
+}
+
+@utility animate-spin-slow {
+  animation: spin-slow 3s linear infinite;
+}
+
+@utility animate-bounce-slow {
+  animation: bounce-slow 2s ease-in-out infinite;
+}
+
+@utility animate-writing {
+  animation: writing 1.5s ease-in-out infinite;
+}
+
+@utility bg-editorial-gradient {
+  background: linear-gradient(120deg, #F0FAF7 0%, #E0F2EE 100%);
+}
+
+@utility hub-surface-container-low {
+  background-color: #f6f3f2;
+}
+
+@utility hub-secondary-container {
+  background-color: #d4e6e2;
+}
+
+@utility hub-tertiary-fixed {
+  background-color: #dbe5e2;
+}
+
+@utility card-hover {
+  transition: all 0.2s ease;
+}
+
+@utility scrollbar-thin {
+  scrollbar-width: thin;
+}
+
+@utility particle-up {
+  animation: particleUp 6s ease-out infinite;
+}
+
+@utility particle-down {
+  animation: particleDown 6s ease-out infinite;
+}
+
+@utility particle-diag-r {
+  animation: particleDiagRight 7s ease-out infinite;
+}
+
+@utility particle-diag-l {
+  animation: particleDiagLeft 7s ease-out infinite;
+}
+
+@utility hub-hero-orb-1 {
+  position: absolute;
+  top: 80px;
+  left: 40px;
+  width: 256px;
+  height: 256px;
+  background: #e67e22;
+  border-radius: 50%;
+  filter: blur(120px);
+  opacity: 0.2;
+  pointer-events: none;
+}
+
+@utility hub-hero-orb-2 {
+  position: absolute;
+  bottom: 80px;
+  right: 40px;
+  width: 384px;
+  height: 384px;
+  background: #d4e6e2;
+  border-radius: 50%;
+  filter: blur(150px);
+  opacity: 0.2;
+  pointer-events: none;
+}
