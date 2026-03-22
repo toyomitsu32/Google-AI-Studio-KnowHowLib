@@ -107,7 +107,7 @@ export default function Hub({ onStart, isAdmin, onCrawlUpdate }: HubProps) {
           <p className="text-lg md:text-xl max-w-2xl mx-auto leading-relaxed" style={{ color: '#564337' }}>
             経験もノウハウもあるのに、書き方がわからない——
             <br />
-            そんな人のための出版社です。
+            そんな人のための編集部です。
             <br />
             編集者との対話だけで、あなたの言葉が記事になります。
           </p>
@@ -364,7 +364,7 @@ export default function Hub({ onStart, isAdmin, onCrawlUpdate }: HubProps) {
           <div className="flex flex-col md:flex-row justify-between items-center gap-4 pt-6" style={{ borderTop: '1px solid rgba(220,193,177,0.2)' }}>
             <div className="text-center md:text-left">
               <p className="text-sm" style={{ color: '#564337' }}>
-                <span className="font-serif font-semibold" style={{ color: '#1b1c1c' }}>ノウハウ出版社</span>
+                <span className="font-serif font-semibold" style={{ color: '#1b1c1c' }}>ノウハウ図書館 編集部</span>
                 {' '}Created by{' '}
                 <a
                   href="https://libecity.com/user_profile/QWQY9sPYMFbXRP6Ipti0I6ROb472"

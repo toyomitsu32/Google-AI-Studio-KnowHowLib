@@ -310,7 +310,7 @@ function AppContent() {
         <div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <button onClick={() => setStep(AppStep.HUB)} className="font-serif italic text-xl" style={{ color: '#1b1c1c' }}>
-              ノウハウ出版社
+              ノウハウ図書館 編集部
             </button>
           </div>
 
@@ -570,6 +570,9 @@ function AppContent() {
         {step === AppStep.SHARE && (
           <ShareStep
             outline={outline}
+            analysis={analysis}
+            profile={profile}
+            apiKey={apiKey}
             onBack={() => setStep(AppStep.PUBLISH)}
             onRestart={handleRestart}
           />

@@ -13,6 +13,14 @@ export interface UserProfile {
   profileText: string;
 }
 
+export interface EmojiUsage {
+  level: 'none' | 'minimal' | 'moderate' | 'heavy';
+  style: string;
+  frequentEmojis: string[];
+  bulletPrefix: boolean;
+  titleEmoji: boolean;
+}
+
 export interface StyleProfile {
   politeness: string;
   warmth: string;
@@ -20,6 +28,7 @@ export interface StyleProfile {
   emotionExpression: string;
   sentenceLength: string;
   frequentExpressions: string[];
+  emojiUsage: EmojiUsage;
 }
 
 export interface ExtractedSkill {

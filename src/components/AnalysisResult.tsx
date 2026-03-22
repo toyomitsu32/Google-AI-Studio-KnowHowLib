@@ -5,6 +5,7 @@ import {
   analyzeProfile,
   regenerateCategoryThemes,
   generateSkillAngleThemes,
+  generateDualAngleThemes,
   THEME_CATEGORIES,
   THEME_CATEGORY_KEYS,
   type ThemeCategoryKey,
@@ -67,6 +68,11 @@ export default function AnalysisResult({
   const [shareOpen, setShareOpen] = useState(false);
   const [shareSelected, setShareSelected] = useState<string[]>([]);
   const skillSectionRef = useRef<HTMLDivElement>(null);
+  // テーマ生成のインライン進捗管理
+  const [generatingAngles, setGeneratingAngles] = useState(false);
+  const [angleProgress, setAngleProgress] = useState<{ current: number; total: number; currentLabel: string; completedKeys: string[] }>({
+    current: 0, total: THEME_CATEGORY_KEYS.length, currentLabel: '', completedKeys: [],
+  });
 
   // ── リベッターシェア ──
   const TOOL_URL = 'https://knowhow-publisher.libecity.com';
@@ -170,25 +176,39 @@ export default function AnalysisResult({
     }
   };
 
-  // New flow: generate all 6 angles in parallel
+  // New flow: generate 6 angles in 3 paired requests (API回数半減)
+  const ANGLE_PAIRS: [ThemeCategoryKey, ThemeCategoryKey][] = [
+    ['howto', 'mindset'],
+    ['story', 'failure'],
+    ['funny', 'other'],
+  ];
+
   const handleGenerateAllAngles = async () => {
     if (!selectedSkill) return;
-    startLoading('テーマを生成中...', `${selectedSkill.label} × 6つの切り口で並行生成しています`);
+    setGeneratingAngles(true);
+    setAngleProgress({ current: 0, total: THEME_CATEGORY_KEYS.length, currentLabel: '', completedKeys: [] });
     try {
-      const results = await Promise.all(
-        THEME_CATEGORY_KEYS.map((key) =>
-          generateSkillAngleThemes(apiKey, profile, analysis, selectedSkill, key)
-        )
-      );
       const updated = { ...categorizedThemes };
-      THEME_CATEGORY_KEYS.forEach((key, i) => {
-        updated[skillKey(key)] = results[i];
-      });
-      setCategorizedThemes(updated);
+      const completedKeys: string[] = [];
+      for (let i = 0; i < ANGLE_PAIRS.length; i++) {
+        const [keyA, keyB] = ANGLE_PAIRS[i];
+        const pairLabel = `${THEME_CATEGORIES[keyA].label} + ${THEME_CATEGORIES[keyB].label}`;
+        setAngleProgress({ current: i * 2, total: THEME_CATEGORY_KEYS.length, currentLabel: pairLabel, completedKeys: [...completedKeys] });
+        const result = await generateDualAngleThemes(apiKey, profile, analysis, selectedSkill, keyA, keyB);
+        updated[skillKey(keyA)] = result.a;
+        updated[skillKey(keyB)] = result.b;
+        completedKeys.push(keyA, keyB);
+        setCategorizedThemes({ ...updated });
+        setAngleProgress({ current: (i + 1) * 2, total: THEME_CATEGORY_KEYS.length, currentLabel: pairLabel, completedKeys: [...completedKeys] });
+        // レート制限回避: リクエスト間に2秒の間隔を入れる
+        if (i < ANGLE_PAIRS.length - 1) {
+          await new Promise(resolve => setTimeout(resolve, 2000));
+        }
+      }
       setSelectedTheme(null);
-      stopLoading();
+      setGeneratingAngles(false);
     } catch (error: any) {
-      stopLoading();
+      setGeneratingAngles(false);
       const errorMsg = error?.message || 'テーマ生成中にエラーが発生しました';
       onError(errorMsg);
       console.error('Angle generation error:', error);
@@ -340,8 +360,8 @@ export default function AnalysisResult({
         </div>
       )}
 
-      {/* Generate All Angles button (new flow, before themes exist) */}
-      {isNewFlow && !hasSkillThemes && (
+      {/* Generate All Angles button / progress (new flow) */}
+      {isNewFlow && !hasSkillThemes && !generatingAngles && (
         <div className="text-center py-8 mb-8 bg-white rounded-xl border border-stone-200">
           <p className="text-stone-500 mb-4">
             <span className="font-semibold" style={{ color: '#e67e22' }}>{selectedSkill!.label}</span> を起点に、6つの切り口でテーマを提案します
@@ -355,6 +375,65 @@ export default function AnalysisResult({
             <SparklesIcon size={16} />
             テーマを生成する
           </button>
+        </div>
+      )}
+
+      {/* Inline progress bar during sequential generation */}
+      {generatingAngles && (
+        <div className="mb-8 bg-white rounded-xl border border-stone-200 p-6">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-8 h-8 rounded-full flex items-center justify-center" style={{ background: '#fff0e0' }}>
+              <span className="material-symbols-outlined animate-spin-slow text-lg" style={{ color: '#e67e22' }}>autorenew</span>
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-stone-800">
+                テーマを生成中… {angleProgress.current}/{angleProgress.total}
+              </p>
+              {angleProgress.currentLabel && angleProgress.current < angleProgress.total && (
+                <p className="text-xs text-stone-500">
+                  「{angleProgress.currentLabel}」を生成しています
+                </p>
+              )}
+            </div>
+          </div>
+
+          {/* Progress bar */}
+          <div className="w-full h-2 bg-stone-100 rounded-full overflow-hidden mb-4">
+            <div
+              className="h-full rounded-full transition-all duration-700 ease-out"
+              style={{
+                width: `${(angleProgress.current / angleProgress.total) * 100}%`,
+                background: 'linear-gradient(90deg, #e67e22, #f59e0b)',
+              }}
+            />
+          </div>
+
+          {/* Category chips */}
+          <div className="flex flex-wrap gap-2">
+            {THEME_CATEGORY_KEYS.map((key, i) => {
+              const isCompleted = angleProgress.completedKeys.includes(key);
+              const isCurrent = !isCompleted && i === angleProgress.current;
+              return (
+                <div
+                  key={key}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-300"
+                  style={
+                    isCompleted
+                      ? { background: '#f0fdf4', color: '#16a34a', border: '1px solid #bbf7d0' }
+                      : isCurrent
+                      ? { background: '#fff7ed', color: '#e67e22', border: '1px solid #fed7aa', animation: 'pulse 2s ease-in-out infinite' }
+                      : { background: '#f5f5f4', color: '#a8a29e', border: '1px solid #e7e5e4' }
+                  }
+                >
+                  {isCompleted && <span style={{ color: '#16a34a' }}>✓</span>}
+                  {isCurrent && (
+                    <span className="inline-block w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                  )}
+                  {THEME_CATEGORIES[key].label}
+                </div>
+              );
+            })}
+          </div>
         </div>
       )}
 

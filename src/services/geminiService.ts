@@ -16,7 +16,7 @@ import type {
 
 const MODEL = 'gemini-2.5-flash';
 const MAX_RETRIES = 3;
-const RETRY_DELAY_MS = 1000;
+const RETRY_DELAY_MS = 3000;
 
 function getClient(apiKey: string) {
   return new GoogleGenAI({ apiKey });
@@ -162,8 +162,15 @@ ${profile.profileText}
 4. この人のスキル・強み（10個）。記事テーマの起点として使える、具体的で差別化された能力・経験、家族構成、専門資格を抽出すること
 
 ## 注意事項
-- 顔文字（(^^), (笑) 等）や記号装飾（♪, ☆, ！ 等）はプロフィールの個性として認識するが、frequentExpressionsには含めないこと
 - frequentExpressionsには記事を書く際に使いそうな**言い回しや文末表現**を入れること（例: 「〜なんですよね」「正直に言うと」）
+- **絵文字分析（重要）**: プロフィール文中の絵文字（😊🔥💪✨ 等）の使用頻度・種類を正確にカウントし、emojiUsageフィールドに反映すること
+  - none: 絵文字ゼロ
+  - minimal: 1〜3個程度（アクセント的に使用）
+  - moderate: 4〜10個程度（要所で使用）
+  - heavy: 11個以上（文章全体に散りばめている）
+- frequentEmojisにはプロフィール文で実際に使われている絵文字を最大10個抽出すること（使われていなければ空配列）
+- bulletPrefixは、箇条書きの先頭に絵文字を使う傾向があるかどうか（moderate以上でtrue）
+- titleEmojiは、見出しやタイトルに絵文字を入れる傾向があるかどうか（heavy以上、またはプロフィールの冒頭・見出し的な位置に絵文字があればtrue）
 
 ## 出力形式（JSON）
 以下のJSON形式で出力してください。必ず有効なJSONのみを出力してください。
@@ -171,7 +178,7 @@ ${profile.profileText}
 \`\`\`json
 {
   "personality": "この人の人物特徴を200文字程度で記述。具体的な経験の組み合わせ、読者がこの人の記事を読む理由を中心に。",
-  "writingStyle": "記事を書いた場合に想定される文体の特徴を150文字程度で記述。",
+  "writingStyle": "記事を書いた場合に想定される文体の特徴を150文字程度で記述。絵文字の使い方の傾向も含めること。",
   "articleTypes": ["具体的な記事テーマ案を3-5個（例: SIerからWeb系への転職で年収を上げるロードマップ）"],
   "styleProfile": {
     "politeness": "丁寧さのレベル（例: カジュアル、やや丁寧、敬語中心）",
@@ -179,7 +186,14 @@ ${profile.profileText}
     "distance": "読者との距離感（例: 友達のよう、先輩後輩、プロフェッショナル）",
     "emotionExpression": "感情表現の度合い（例: 控えめ、率直、豊か）",
     "sentenceLength": "文の傾向（例: 短文中心、バランス型、説明が丁寧）",
-    "frequentExpressions": ["記事で使いそうな言い回し・文末表現を3-5個"]
+    "frequentExpressions": ["記事で使いそうな言い回し・文末表現を3-5個"],
+    "emojiUsage": {
+      "level": "none | minimal | moderate | heavy のいずれか",
+      "style": "絵文字の使い方の特徴を1文で記述（例: 感情を強調する場面で使用、箇条書きの装飾として使用、ほぼ全文に散りばめる）",
+      "frequentEmojis": ["プロフィールで実際に使われている絵文字を最大10個"],
+      "bulletPrefix": "箇条書きの先頭に絵文字を使うかどうか（true/false）",
+      "titleEmoji": "タイトルや見出しに絵文字を入れるかどうか（true/false）"
+    }
   },
   "skills": [
     { "id": "skill-1", "label": "スキル/強みの短い名前", "description": "このスキルの詳細説明（どんな経験に基づくか、記事テーマにどう活かせるか）" }
@@ -191,6 +205,19 @@ ${profile.profileText}
   const result = extractJSON(raw) as ProfileAnalysis;
   // Backward compatibility: ensure skills array exists
   if (!result.skills) result.skills = [];
+  // Backward compatibility: ensure emojiUsage exists
+  if (!result.styleProfile?.emojiUsage) {
+    if (!result.styleProfile) {
+      (result as any).styleProfile = {};
+    }
+    result.styleProfile.emojiUsage = {
+      level: 'none',
+      style: '絵文字を使用しない',
+      frequentEmojis: [],
+      bulletPrefix: false,
+      titleEmoji: false,
+    };
+  }
   return result;
 }
 
@@ -378,6 +405,79 @@ ${excludeSection}${freeTextSection}
 
   const raw = await callGemini(apiKey, prompt);
   return extractJSON(raw) as ArticleTheme[];
+}
+
+// ============================================================
+// 2b2. generateDualAngleThemes (2カテゴリ同時生成 — API回数半減)
+// ============================================================
+export async function generateDualAngleThemes(
+  apiKey: string,
+  profile: UserProfile,
+  analysis: ProfileAnalysis,
+  skill: ExtractedSkill,
+  angleKeyA: ThemeCategoryKey,
+  angleKeyB: ThemeCategoryKey,
+): Promise<{ a: ArticleTheme[]; b: ArticleTheme[] }> {
+  const angleA = THEME_CATEGORIES[angleKeyA];
+  const angleB = THEME_CATEGORIES[angleKeyB];
+
+  const prompt = `あなたは記事企画のプロです。以下の人物のスキル・強みと**2つの切り口**を組み合わせて、この人が書くべき記事テーマを提案してください。
+
+## 人物分析
+- 人物特徴: ${analysis.personality}
+- 文体: ${analysis.writingStyle}
+- 得意な記事タイプ: ${analysis.articleTypes.join(', ')}
+
+## プロフィール
+${profile.profileText}
+
+## 選択されたスキル・強み
+- ${skill.label}: ${skill.description}
+
+## 切り口A: ${angleA.label}
+${angleA.instruction}
+
+## 切り口B: ${angleB.label}
+${angleB.instruction}
+
+## 条件
+- 「${skill.label}」というスキル/強みを活かしたテーマであること
+- 切り口Aに合ったテーマを**4個**、切り口Bに合ったテーマを**4個**、合計8個を提案すること
+- 読者のニーズが明確なテーマ
+- 差別化しやすいテーマ
+- **タイトルは必ず50文字以内にすること**
+- **重要：プロフィール文の情報をそのまま転記・羅列するテーマは避けること**
+
+## タイトルのバリエーション（重要）
+8個のテーマには、以下のようなキャッチーなタイトル形式をバランスよく含めてください：
+- 「〇〇な人が知るべき△△3選」などのリスト型
+- 「〇〇してみた結果」などの体験型
+- 「〇〇の教科書」などの網羅型
+- 「なぜ〇〇は△△なのか」などの問いかけ型
+同じ形式が連続しないよう、バリエーション豊かに提案してください。
+
+## 出力形式（JSON）
+\`\`\`json
+{
+  "a": [
+    { "id": "skill-${skill.id}-${angleKeyA}-1", "title": "タイトル", "audience": "想定読者", "problem": "読者の悩み", "reason": "この人がこのテーマを書くべき理由" },
+    { "id": "skill-${skill.id}-${angleKeyA}-2", "title": "タイトル", "audience": "想定読者", "problem": "読者の悩み", "reason": "理由" },
+    { "id": "skill-${skill.id}-${angleKeyA}-3", "title": "タイトル", "audience": "想定読者", "problem": "読者の悩み", "reason": "理由" },
+    { "id": "skill-${skill.id}-${angleKeyA}-4", "title": "タイトル", "audience": "想定読者", "problem": "読者の悩み", "reason": "理由" }
+  ],
+  "b": [
+    { "id": "skill-${skill.id}-${angleKeyB}-1", "title": "タイトル", "audience": "想定読者", "problem": "読者の悩み", "reason": "理由" },
+    { "id": "skill-${skill.id}-${angleKeyB}-2", "title": "タイトル", "audience": "想定読者", "problem": "読者の悩み", "reason": "理由" },
+    { "id": "skill-${skill.id}-${angleKeyB}-3", "title": "タイトル", "audience": "想定読者", "problem": "読者の悩み", "reason": "理由" },
+    { "id": "skill-${skill.id}-${angleKeyB}-4", "title": "タイトル", "audience": "想定読者", "problem": "読者の悩み", "reason": "理由" }
+  ]
+}
+\`\`\`
+
+必ず有効なJSONのみを出力してください。aは切り口A（${angleA.label}）、bは切り口B（${angleB.label}）のテーマです。`;
+
+  const raw = await callGemini(apiKey, prompt);
+  return extractJSON(raw) as { a: ArticleTheme[]; b: ArticleTheme[] };
 }
 
 // ============================================================
@@ -766,6 +866,11 @@ ${orderedHeadings && orderedHeadings.length > 0 ? (() => {
 - 距離感: ${styleProfile.distance}
 - 感情表現: ${styleProfile.emotionExpression}
 - 文の傾向: ${styleProfile.sentenceLength}
+- 絵文字の使用レベル: ${styleProfile.emojiUsage?.level || 'none'}
+- 絵文字の使い方: ${styleProfile.emojiUsage?.style || '使用しない'}
+- よく使う絵文字: ${styleProfile.emojiUsage?.frequentEmojis?.join(' ') || 'なし'}
+- 箇条書き先頭に絵文字を使うか: ${styleProfile.emojiUsage?.bulletPrefix ? 'はい' : 'いいえ'}
+- タイトル・見出しに絵文字を入れるか: ${styleProfile.emojiUsage?.titleEmoji ? 'はい' : 'いいえ'}
 
 ## 執筆者プロフィール
 ${profile.profileText}
@@ -794,6 +899,7 @@ ${CATEGORIES}
 
 ### 記事本文（bodyMarkdown）
 Markdown形式で記事本文を生成してください。
+**この記事はnote風のブログプラットフォームで公開されます。スマホでの閲覧を前提とした読みやすさが最優先です。**
 
 **使える装飾（これ以外は使わないこと）:**
 - テキスト（通常の段落）
@@ -801,6 +907,17 @@ Markdown形式で記事本文を生成してください。
 - \`###\` 小見出し
 - \`**太字**\`
 - \`[テキスト](URL)\` リンク（プレースホルダーでOK）
+
+**note風の読みやすさルール（最重要）:**
+- **改行・段落**: 2〜3文ごとに改行（空行）を入れること。5行以上テキストが続く段落は禁止。スマホで「テキストの壁」に見えないようにする
+- **一文の長さ**: 1文は60文字以内を目安にする。長い文は句読点で分割すること
+- **段落間の空行**: 段落と段落の間には必ず空行を1行入れ、読むリズムを作ること
+- **太字の活用**: 各段落で最も伝えたいキーワードや1フレーズを**太字**にすること。太字は1段落に1〜2箇所まで。読者がスクロールで流し読みしても太字だけ追えば要点が分かる状態が理想
+- **見出しの間隔**: 見出し（## / ###）の前後には空行を入れ、視覚的な区切りを明確にすること
+- **箇条書きの活用**: 3つ以上の並列情報は箇条書きにすること（ただし後述の箇条書きルールに従う）
+- **漢字とひらがなのバランス**: 漢字が連続する硬い表現を避け、ひらがな・カタカナを適度に混ぜて親しみやすくする（例: 「実施する」→「やってみる」、「非常に」→「とても」）
+- **読者への語りかけ**: 3〜4段落に1回は読者に語りかける表現を入れる（「〜ですよね」「〜ありませんか？」等）
+- **導入文の冒頭3行が勝負**: 最初の3行で「この記事は誰のための、何の記事か」を明確に伝えること。冒頭で離脱されないよう、共感や問いかけから入る
 
 **構成ルール:**
 - 導入文 → 大見出し×${orderedHeadings ? orderedHeadings.length : '3'}（${orderedHeadings ? '指定された見出し' : '選択ポイント'}を軸）→ まとめ の流れ
@@ -814,32 +931,41 @@ Markdown形式で記事本文を生成してください。
   - 良い例: 「3社目の面接では、技術の仕組みを聞かれてまったく答えられず、面接官の困った顔が忘れられません」
   - 悪い例: 「面接では技術的な質問に答えられないこともありました」
 - 感情の動き（焦り、悔しさ、喜びなど）を**具体的な状況描写とセットで**書くこと
-- **箇条書きのルール（重要）**: 箇条書き（- や 1. で始まる行）は**2項目ごとに地の文を挟む**こと。3項目以上の連続箇条書きは禁止。
+- **箇条書きのルール（重要）**: 箇条書きは**2項目ごとに地の文を挟む**こと。3項目以上の連続箇条書きは禁止。
+- **箇条書きの書式ルール**: 絵文字を箇条書きの先頭に使う場合は、Markdownの箇条書き記号（- や * ）は付けず、絵文字から直接始めること。「- 💡」のようにマーク＋絵文字が連続するのは禁止。
+  - 良い例: 「💡 ポイント：〜」「✅ 確認事項：〜」（絵文字が箇条書きマークの役割を果たす）
+  - 悪い例: 「- 💡 ポイント：〜」「- ✅ 確認事項：〜」（マークと絵文字が重複）
+  - 絵文字なしの箇条書きは通常通り「- 」で始めてOK
+- **箇条書き内の太字**: 箇条書きの各項目で、最も重要なキーワードを1つ**太字**にすること
 
-  良い例（プロフィールに金額がある場合）:
+  良い例（絵文字なし・太字あり）:
   \`\`\`
-  まず最初に取り組んだのは固定費の見直しです。
-  - スマホを格安SIMに乗り換え（月5,000円削減）
-  - 不要なサブスクを整理（月3,000円削減）
-  この2つだけで月8,000円、年間で約10万円の節約になりました。
+  まず最初に取り組んだのは**固定費の見直し**です。
+
+  - **格安SIM**に乗り換え（月5,000円削減）
+  - 不要な**サブスク**を整理（月3,000円削減）
+
+  この2つだけで月8,000円、年間で約**10万円の節約**になりました。
   \`\`\`
 
-  良い例（プロフィールに金額がない場合 → 定性表現で代替）:
+  良い例（絵文字付き箇条書き・太字あり）:
   \`\`\`
   まず取り組んだのは固定費の見直しです。
-  - スマホを格安SIMに乗り換えた（想像以上に差額が大きくて驚きました）
-  - 使っていないサブスクを全て解約した
-  正直「たったこれだけ？」と思ったのですが、翌月の明細を見て節約効果に驚きました。
+
+  📱 **格安SIM**に乗り換えた（想像以上に差額が大きくて驚きました）
+  🎬 使っていない**サブスク**を全て解約した
+
+  正直「たったこれだけ？」と思ったのですが、翌月の明細を見て**節約効果に驚きました**。
   \`\`\`
 
-  悪い例（箇条書きの羅列）:
+  悪い例（マーク＋絵文字の重複 / 太字なし / 改行なし）:
   \`\`\`
   固定費の見直しでやったことは以下です。
-  - スマホを格安SIMに乗り換え
-  - 不要なサブスクを整理
-  - 掛け捨て保険に切り替え
-  - 医療保険を解約
-  - 電気会社を切り替え
+  - 📱 スマホを格安SIMに乗り換え
+  - 🎬 不要なサブスクを整理
+  - 🏥 掛け捨て保険に切り替え
+  - 🏥 医療保険を解約
+  - ⚡ 電気会社を切り替え
   \`\`\`
 - 一般論やテンプレ的なアドバイスだけで終わらせず、「この執筆者だからこそ言える」独自の視点を必ず含めること
 
@@ -884,6 +1010,15 @@ ${financeRules}
 - 記事の最初から最後まで、文体プロファイルに記載されたトーンを維持すること
 - 箇条書きや手順説明のセクションでも、文末表現は文体プロファイルに合わせること
 - 顔文字（(^^), (笑) 等）、記号装飾（♪, ☆ 等）は記事本文では**使用しないこと**
+${styleProfile.emojiUsage?.level === 'none' ? '- 絵文字（😊🔥💪 等）も一切使用しないこと' :
+  styleProfile.emojiUsage?.level === 'minimal' ? '- 絵文字は控えめに使用（記事全体で2〜3個まで。強調したい箇所にのみアクセント的に使用）。使う場合は著者がよく使う絵文字（' + (styleProfile.emojiUsage?.frequentEmojis?.join(' ') || '') + '）から選ぶこと' :
+  styleProfile.emojiUsage?.level === 'moderate' ? `- 絵文字を要所で活用すること（各セクションに1〜2個程度）。著者がよく使う絵文字（${styleProfile.emojiUsage?.frequentEmojis?.join(' ') || ''}）を中心に使用
+- ${styleProfile.emojiUsage?.bulletPrefix ? '箇条書きの先頭には絵文字を付けること（例: 💡 ポイント、✅ 確認事項）' : '箇条書きの先頭に絵文字は不要'}
+- ${styleProfile.emojiUsage?.titleEmoji ? '大見出し（##）にも絵文字を1つ付けること' : '見出しには絵文字を付けない'}` :
+  `- 絵文字を積極的に使用すること（各段落に1個以上、箇条書きの全項目に絵文字プレフィックス）。著者がよく使う絵文字（${styleProfile.emojiUsage?.frequentEmojis?.join(' ') || ''}）を中心に使用
+- 箇条書きの先頭には必ず絵文字を付けること（例: 💡 ポイント、✅ 確認、⚠️ 注意）
+- 大見出し（##）と小見出し（###）にも絵文字を1つ付けること
+- タイトルにも絵文字を含めること`}
 
 ## 出力形式（JSON）
 \`\`\`json
@@ -969,5 +1104,71 @@ ${isHowTo ? `
   return extractJSON(raw) as Record<string, string[]>;
 }
 
+// ============================================================
+// 7. generateTweetTemplates (リベッター投稿文を著者の文体で生成)
+// ============================================================
+export interface TweetTemplate {
+  label: string;
+  text: string;
+}
 
+export async function generateTweetTemplates(
+  apiKey: string,
+  title: string,
+  summary: string,
+  styleProfile: StyleProfile,
+  profileText: string,
+  articleUrl: string,
+): Promise<TweetTemplate[]> {
+  const url = articleUrl.trim() || 'https://knowhow-publisher.libecity.com';
 
+  const prompt = `あなたはSNS投稿のプロです。以下の記事情報と著者の文体プロファイルに基づき、リベッター（SNS）に投稿するつぶやき文を**3パターン**生成してください。
+
+## 記事情報
+- タイトル: ${title}
+- 要約: ${summary}
+- URL: ${url}
+
+## 著者の文体プロファイル（最重要 — この文体を厳密に反映すること）
+- 丁寧さ: ${styleProfile.politeness}
+- 温度感: ${styleProfile.warmth}
+- 読者との距離感: ${styleProfile.distance}
+- 感情表現: ${styleProfile.emotionExpression}
+- 文の傾向: ${styleProfile.sentenceLength}
+- よく使う言い回し: ${styleProfile.frequentExpressions.join('、')}
+
+## 著者プロフィール（参考）
+${profileText}
+
+## 条件
+- 各つぶやきは200文字以内にすること
+- 3パターンはそれぞれ異なるアプローチにすること：
+  1. 悩み共感型（読者の悩みに寄り添う導入）
+  2. 寄稿報告型（記事を書いた事実を伝える）
+  3. 体験シェア型（自分の経験として語る）
+- **最重要：著者の文体プロファイルを忠実に再現すること**
+  - 文末表現（です/ます調 or だ/である調 or カジュアル）は文体プロファイルに合わせる
+  - frequentExpressionsに挙がった言い回しを自然に組み込む
+  - 温度感・距離感を反映する（温かい人は温かく、クールな人はクールに）
+- 顔文字（(^^), (笑) 等）、記号装飾（♪, ☆ 等）は使わないこと
+${styleProfile.emojiUsage?.level === 'none' ? '- 絵文字も一切使わないこと' :
+  styleProfile.emojiUsage?.level === 'minimal' ? '- 絵文字は最大1個まで、アクセント的に使用。著者がよく使う絵文字（' + (styleProfile.emojiUsage?.frequentEmojis?.join(' ') || '') + '）から選ぶこと' :
+  styleProfile.emojiUsage?.level === 'moderate' ? '- 絵文字を2〜3個、要所に使用。著者がよく使う絵文字（' + (styleProfile.emojiUsage?.frequentEmojis?.join(' ') || '') + '）を中心に使うこと' :
+  '- 絵文字を積極的に使用（3〜5個）。著者がよく使う絵文字（' + (styleProfile.emojiUsage?.frequentEmojis?.join(' ') || '') + '）を散りばめること'}
+- URLは必ず末尾に含めること
+- ハッシュタグは使わないこと
+
+## 出力形式（JSON）
+\`\`\`json
+[
+  { "label": "🤝 悩み共感型", "text": "つぶやき本文..." },
+  { "label": "📣 寄稿報告", "text": "つぶやき本文..." },
+  { "label": "💡 体験シェア", "text": "つぶやき本文..." }
+]
+\`\`\`
+
+必ず有効なJSONのみを出力してください。`;
+
+  const raw = await callGemini(apiKey, prompt);
+  return extractJSON(raw) as TweetTemplate[];
+}
