@@ -75,7 +75,7 @@ export default function AnalysisResult({
   });
 
   // ── リベッターシェア ──
-  const TOOL_URL = 'https://knowhow-publisher.libecity.com';
+  const TOOL_URL = 'https://libecity.com/room_list?room_id=SEG96Zoun75WxITHlKEi';
   // 👍は「いいね」で日常使いされるため除外。投票用に区別しやすい3つを使用
   const REACTION_EMOJIS = ['👏', '😲', '❤️'];
 
@@ -88,7 +88,14 @@ export default function AnalysisResult({
   };
 
   const buildLibetterUrl = (titles: string[]) => {
-    return 'https://libecity.com/room_list?room_id=SEG96Zoun75WxITHlKEi';
+    if (titles.length === 0) return '';
+    const text = 'どれが読みたい？\nリアクションで教えて！\n' +
+      titles.map((title, i) => {
+        const display = title.length > 27 ? title.slice(0, 26) + '…' : title;
+        return `${REACTION_EMOJIS[i]} ${display}\n`;
+      }).join('') +
+      TOOL_URL;
+    return `https://libecity.com/tweet/all?create=${encodeURIComponent(text)}`;
   };
 
   if (!analysis) return null;

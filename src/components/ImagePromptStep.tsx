@@ -172,6 +172,7 @@ ${outline.bodyMarkdown}`;
 
 ■ デザイン指定
 ${styleInstruction}
+- 画像サイズは 横1600px × 縦900px（アスペクト比 16:9）とすること
 - 配色・フォント・装飾はスライド全体で統一すること
 - テキストは大きめに、余白を十分に取ること
 - 背景はシンプルにし、テキストの可読性を優先すること
@@ -247,11 +248,10 @@ ${sections.length + 2}枚目（締めくくり）：
                         setSourceText('');
                         setSlidePrompt('');
                       }}
-                      className={`text-sm px-3.5 py-2 rounded-full border-2 transition-all font-medium ${
-                        isSelected
+                      className={`text-sm px-3.5 py-2 rounded-full border-2 transition-all font-medium ${isSelected
                           ? 'font-semibold'
                           : 'border-stone-200 text-stone-600 hover:border-amber-200 hover:bg-stone-50'
-                      }`}
+                        }`}
                       style={isSelected ? { borderColor: '#e67e22', background: '#fff8f0', color: '#944a00' } : {}}
                     >
                       {style.label}
