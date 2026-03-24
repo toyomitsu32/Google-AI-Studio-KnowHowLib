@@ -76,25 +76,32 @@ export default function AnalysisResult({
 
   // ── リベッターシェア ──
   const TOOL_URL = 'https://libecity.com/room_list?room_id=SEG96Zoun75WxITHlKEi';
-  // 👍は「いいね」で日常使いされるため除外。投票用に区別しやすい3つを使用
-  const REACTION_EMOJIS = ['👏', '😲', '❤️'];
+  // 😲, ❤️, 👏 の順番に変更
+  const REACTION_EMOJIS = ['😲', '❤️', '👏'];
 
   const toggleShareItem = (title: string) => {
     setShareSelected((prev) => {
       if (prev.includes(title)) return prev.filter((t) => t !== title);
-      if (prev.length >= 3) return prev;
+      if (prev.length >= 2) return prev;
       return [...prev, title];
     });
   };
 
   const buildLibetterUrl = (titles: string[]) => {
     if (titles.length === 0) return '';
-    const text = 'どれが読みたい？\nリアクションで教えて！\n' +
-      titles.map((title, i) => {
-        const display = title.length > 27 ? title.slice(0, 26) + '…' : title;
-        return `${REACTION_EMOJIS[i]} ${display}\n`;
-      }).join('') +
-      TOOL_URL;
+    
+    // 140文字制限への精密な最適化
+    // 固定部: 導入文(36) + 絵文字等(8) + URL(10) = 54文字
+    // 残り 140 - 54 = 86文字。テーマ2つの場合、1つあたり最大43文字。
+    const maxTitleLen = 43;
+    
+    const header = 'どのノウハウ図書館の記事が読みたい？\nリアクションで教えてください！\n';
+    const body = titles.map((title, i) => {
+      const display = title.length > maxTitleLen ? title.slice(0, maxTitleLen - 1) + '…' : title;
+      return `${REACTION_EMOJIS[i]} ${display}\n`;
+    }).join('');
+    
+    const text = header + body + TOOL_URL;
     return `https://libecity.com/tweet/all?create=${encodeURIComponent(text)}`;
   };
 
@@ -480,10 +487,10 @@ export default function AnalysisResult({
             <div className="mb-4 rounded-xl border-2 p-4 animate-fade-in" style={{ borderColor: '#e67e22', background: '#fffcf8' }}>
               <div className="mb-3">
                 <p className="text-sm font-semibold" style={{ color: '#502600' }}>
-                  フォロワーに聞きたいテーマを3つまで選んでください
+                  フォロワーに聞きたいテーマを2つ選んでください
                 </p>
                 <p className="text-xs mt-1" style={{ color: '#564337' }}>
-                  リアクションで投票してもらえるつぶやきが作れます（{REACTION_EMOJIS.join(' ')}）
+                  リアクションで投票してもらえるつぶやきが作れます（{REACTION_EMOJIS[0]} {REACTION_EMOJIS[1]}）
                 </p>
               </div>
 
@@ -491,7 +498,7 @@ export default function AnalysisResult({
                 {getAllThemeTitles().map((title) => {
                   const idx = shareSelected.indexOf(title);
                   const isChosen = idx >= 0;
-                  const isFull = shareSelected.length >= 3 && !isChosen;
+                  const isFull = shareSelected.length >= 2 && !isChosen;
                   return (
                     <button
                       key={title}
@@ -517,9 +524,10 @@ export default function AnalysisResult({
               {shareSelected.length > 0 && (
                 <div className="rounded-lg p-3 mb-3 text-xs leading-relaxed whitespace-pre-wrap" style={{ background: '#f6f3f2', color: '#564337' }}>
                   <span style={{ color: '#944a00', fontWeight: 600 }}>プレビュー：</span>{'\n'}
-                  {'どれが読みたい？\nリアクションで教えて！\n'}
+                  {'どのノウハウ図書館の記事が読みたい？\nリアクションで教えてください！\n'}
                   {shareSelected.map((title, i) => {
-                    const display = title.length > 27 ? title.slice(0, 26) + '…' : title;
+                    const maxTitleLen = 43;
+                    const display = title.length > maxTitleLen ? title.slice(0, maxTitleLen - 1) + '…' : title;
                     return `${REACTION_EMOJIS[i]} ${display}\n`;
                   }).join('')}
                   {TOOL_URL}
@@ -528,7 +536,7 @@ export default function AnalysisResult({
 
               <div className="flex items-center justify-between">
                 <span className="text-xs" style={{ color: '#564337' }}>
-                  {shareSelected.length}/3 選択中
+                  {shareSelected.length}/2 選択中
                 </span>
                 {(() => {
                   const url = buildLibetterUrl(shareSelected);
